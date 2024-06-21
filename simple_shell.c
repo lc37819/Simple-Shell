@@ -21,8 +21,13 @@ int parse_integer(const char *str, int *output);
 void exit_command(char **parsed_command, char *command);
 void proc_command(char **parsed_command);
 void execute_command(char **parsed_command, char *command);
+int is_blank(const char *command);
+void save_command(char *command);
+void history_command(void);
 
 int main(int argc, char **argv) {
+
+    (void)argv;
 
     if (argc > 1) {
         fprintf(stderr, "Error: Command-line arguments are not allowed.\n");
@@ -43,6 +48,8 @@ void user_prompt_loop(void) {
         printf(">> ");
         command = get_user_command();
 
+        if (strcmp(command, "history") != 0) save_command(command);
+
         parsed_command = parse_command(command);
 
         if (parsed_command[0]) {
@@ -53,6 +60,10 @@ void user_prompt_loop(void) {
 
             else if (strcmp(parsed_command[0], "exit") == 0) {
                 exit_command(parsed_command, command);
+            }
+
+            else if (strcmp(parsed_command[0], "history") == 0) {
+                history_command();
             }
 
             else {
@@ -259,4 +270,67 @@ void execute_command(char **parsed_command, char *command) {
     else {
         waitpid(pid, &status, 0);
     }
+}
+
+int is_blank(const char *command) {
+    for (int i = 0; command[i] != '\0'; i++) {
+        if (!isspace((unsigned char)command[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void save_command(char *command) {
+    if (is_blank(command)) {
+        return;
+    }
+
+    char *home_directory = getenv("HOME");
+    char file_path[1024];
+
+    snprintf(file_path, sizeof(file_path), "%s/.421sh", home_directory);
+
+    FILE *file = fopen(file_path, "a");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    fprintf(file, "%s\n", command);
+    fclose(file);
+}
+
+void history_command(void) {
+    char *home_directory = getenv("HOME");
+    char file_path[1024];
+    char *commands[10] = {NULL};
+    int count = 0;
+    char *line = NULL;
+    size_t len = 0;
+
+    snprintf(file_path, sizeof(file_path), "%s/.421sh", home_directory);
+
+    FILE *file = fopen(file_path, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    while (getline(&line, &len, file) != -1) {
+        if (count >= 10) {
+            free(commands[count % 10]);
+        }
+        commands[count % 10] = strdup(line);
+        count++;
+    }
+
+    int start = count < 10 ? 0 : count - 10;
+    for (int i = start; i < count; i++) {
+        printf("%s", commands[i % 10]);
+        free(commands[i % 10]);
+    }
+
+    free(line);
+    fclose(file);
 }
