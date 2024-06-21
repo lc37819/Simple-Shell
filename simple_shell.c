@@ -17,6 +17,8 @@ void user_prompt_loop(void);
 char *get_user_command(void);
 char **parse_command(const char *command);
 char *next_segment(const char **command);
+int parse_integer(const char *str, int *output);
+void exit_command(char **parsed_command, char *command);
 
 int main(int argc, char **argv) {
 
@@ -38,35 +40,16 @@ void user_prompt_loop(void) {
     while(1) {
         printf(">> ");
         command = get_user_command();
-        size_t length = strlen(command);
-
-        if (length > 0 && command[length - 1] == '\n') {
-            command[length - 1] = '\0';
-        }
-
-        if (strcmp(command, "exit") == 0) {
-            free(command);
-            exit(0);
-        }
 
         parsed_command = parse_command(command);
 
-        if (!parsed_command) {
-            fprintf(stderr, "Error: Command could not be parsed\n");
-            free(command);
-            continue;
+        if (parsed_command[0] && strcmp(parsed_command[0], "exit") == 0) {
+            exit_command(parsed_command, command);
         }
 
-        /* Used to test if the command is being read correctly */
-        printf("user input: %s\n", command);
-
-        /* Used to test if the command is being read and parsed */
-        printf("parsed output: ");
         for (int i = 0; parsed_command[i]; i++) {
-            printf("[%s] ", parsed_command[i]);
             free(parsed_command[i]);
         }
-        printf("\n");
 
         free(parsed_command);
         free(command);
@@ -161,4 +144,56 @@ char *next_segment(const char **command) {
         *command += next_space;
     }
     return segment;
+}
+
+int parse_integer(const char *str, int *output) {
+    char *end;
+    long value = strtol(str, &end, 10);
+
+    if (end == str || *end != '\0') {
+        return -1;
+    }
+
+    *output = (int)value;
+    return 0;
+}
+
+void exit_command(char **parsed_command, char *command) {
+    int arg_count = 0;
+    for (int i = 1; parsed_command[i]; i++) {
+        arg_count++;
+    }
+
+    if (arg_count > 1) {
+        fprintf(stderr, "Error: Invalid number of arguments.\n");
+        return;
+    }
+
+    if (parsed_command[1]) {
+        int exit_status;
+
+        if (parse_integer(parsed_command[1], &exit_status) == 0) {
+            for (int i = 0; parsed_command[i]; i++) {
+                free(parsed_command[i]);
+            }
+
+            free(command);
+            free(parsed_command);
+            printf("exit status: %d\n", exit_status);
+            exit(exit_status);
+        }
+        else {
+            fprintf(stderr, "Error: Invalid exit status '%s'.\n", parsed_command[1]);
+        }
+    }
+    else {
+        for (int i = 0; parsed_command[i]; i++) {
+            free(parsed_command[i]);
+        }
+
+        free(command);
+        free(parsed_command);
+        printf("exit status: 0\n");
+        exit(0);
+    }
 }
