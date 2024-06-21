@@ -20,6 +20,7 @@ char *next_segment(const char **command);
 int parse_integer(const char *str, int *output);
 void exit_command(char **parsed_command, char *command);
 void proc_command(char **parsed_command);
+void execute_command(char **parsed_command, char *command);
 
 int main(int argc, char **argv) {
 
@@ -44,12 +45,19 @@ void user_prompt_loop(void) {
 
         parsed_command = parse_command(command);
 
-        if (parsed_command[0] && strcmp(parsed_command[0], "proc") == 0) {
-            proc_command(parsed_command);
-        }
+        if (parsed_command[0]) {
 
-        if (parsed_command[0] && strcmp(parsed_command[0], "exit") == 0) {
-            exit_command(parsed_command, command);
+            if (strcmp(parsed_command[0], "proc") == 0) {
+                proc_command(parsed_command);
+            }
+
+            else if (strcmp(parsed_command[0], "exit") == 0) {
+                exit_command(parsed_command, command);
+            }
+
+            else {
+                execute_command(parsed_command, command);
+            }
         }
 
         for (int i = 0; parsed_command[i]; i++) {
@@ -184,7 +192,6 @@ void exit_command(char **parsed_command, char *command) {
 
             free(command);
             free(parsed_command);
-            printf("exit status: %d\n", exit_status);
             exit(exit_status);
         }
         else {
@@ -198,7 +205,6 @@ void exit_command(char **parsed_command, char *command) {
 
         free(command);
         free(parsed_command);
-        printf("exit status: 0\n");
         exit(0);
     }
 }
@@ -213,8 +219,6 @@ void proc_command(char **parsed_command) {
 
     char fullpath[512] = "/proc/";
     strncat(fullpath, filepath, sizeof(fullpath) - strlen(fullpath) - 1);
-
-    printf("Reading from: %s\n", fullpath);
 
     FILE *file = fopen(fullpath, "r");
     if (!file) {
@@ -231,4 +235,28 @@ void proc_command(char **parsed_command) {
 
     free(line);
     fclose(file);
+}
+
+void execute_command(char **parsed_command, char *command) {
+    pid_t pid;
+    int status;
+
+    pid = fork();
+
+    if (pid == 0) {
+        if (execvp(parsed_command[0], parsed_command) == -1) {
+            for (int i = 0; parsed_command[i]; i++) {
+                free(parsed_command[i]);
+            }
+            free(parsed_command);
+            free(command);
+            exit(1);
+        }
+    }
+    else if (pid < 0) {
+        perror("Error: Forking error occured.\n");
+    }
+    else {
+        waitpid(pid, &status, 0);
+    }
 }
