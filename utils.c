@@ -30,7 +30,7 @@ void flush_input(FILE *fp) {
 }
 
 char *unescape(const char *str, FILE *errf) {
-    size_t len = strlen(str), i;
+    size_t len = strlen(str);
     char *unesc, *rv;
     char cur;
     char quoted = 0;

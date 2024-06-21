@@ -1,6 +1,5 @@
 ## Simple Shell
-This project is about creating a C program that functions as a basic Unix/Linux
-(*nix) shell. 
+This project involves developing a C program that acts as a basic Unix/Linux (*nix) shell.
 
 The core functionalities of this project include Prompt and Command Entry, Handling Command
 Line Arguments, Arbitrary Command Length Acceptance, Command Parsing, Built-in Exit Command, and
