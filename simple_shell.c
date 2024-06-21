@@ -19,6 +19,7 @@ char **parse_command(const char *command);
 char *next_segment(const char **command);
 int parse_integer(const char *str, int *output);
 void exit_command(char **parsed_command, char *command);
+void proc_command(char **parsed_command);
 
 int main(int argc, char **argv) {
 
@@ -42,6 +43,10 @@ void user_prompt_loop(void) {
         command = get_user_command();
 
         parsed_command = parse_command(command);
+
+        if (parsed_command[0] && strcmp(parsed_command[0], "proc") == 0) {
+            proc_command(parsed_command);
+        }
 
         if (parsed_command[0] && strcmp(parsed_command[0], "exit") == 0) {
             exit_command(parsed_command, command);
@@ -196,4 +201,34 @@ void exit_command(char **parsed_command, char *command) {
         printf("exit status: 0\n");
         exit(0);
     }
+}
+
+void proc_command(char **parsed_command) {
+    if (!parsed_command[1] || parsed_command[2]) {
+        fprintf(stderr, "Error: Invalid number of arguments.\n");
+        return;
+    }
+
+    char *filepath = parsed_command[1];
+
+    char fullpath[512] = "/proc/";
+    strncat(fullpath, filepath, sizeof(fullpath) - strlen(fullpath) - 1);
+
+    printf("Reading from: %s\n", fullpath);
+
+    FILE *file = fopen(fullpath, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t read;
+    while ((read = getline(&line, &size, file)) != -1) {
+        printf("%s", line);
+    }
+
+    free(line);
+    fclose(file);
 }
